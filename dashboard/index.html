@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Мои финансы</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --fb-bg:#ffffff;--fb-card:#f2f3f7;--fb-text:#16181d;--fb-hint:#8a8f99;--fb-accent:#2f7de1;--fb-accent-text:#fff;--fb-sep:rgba(0,0,0,.08);
+  --c-must:#378ADD;--c-life:#1D9E75;--c-once:#D85A30;--c-inc:#4f9a1c;--c-warn:#e0a020;--c-bad:#e24b4a;
+}
+@media (prefers-color-scheme:dark){:root{--fb-bg:#17212b;--fb-card:#232e3c;--fb-text:#f5f5f5;--fb-hint:#7d8b99;--fb-accent:#5aa9ea;--fb-sep:rgba(255,255,255,.08)}}
+:root{
+  --bg:var(--tg-theme-bg-color,var(--fb-bg));--card:var(--tg-theme-secondary-bg-color,var(--fb-card));
+  --text:var(--tg-theme-text-color,var(--fb-text));--hint:var(--tg-theme-hint-color,var(--fb-hint));
+  --accent:var(--tg-theme-button-color,var(--fb-accent));--accent-text:var(--tg-theme-button-text-color,var(--fb-accent-text));
+  --sep:var(--fb-sep);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+main{max-width:640px;margin:0 auto;padding:12px 16px}
+.nav{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}
+.nav b{font-size:18px;font-weight:600}
+.nav button{background:var(--card);color:var(--text);border:0;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer}
+.nav button:disabled{opacity:.3}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.card{background:var(--card);border-radius:12px;padding:10px 12px}
+.card .l{font-size:12px;color:var(--hint)}
+.card .v{font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pos{color:var(--c-inc)}.neg{color:var(--c-bad)}
+.sec{background:var(--card);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.sec h3{margin:0 0 10px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.sec h3 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.row{padding:6px 0;cursor:pointer}
+.row .t{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.row .t span:last-child{white-space:nowrap}
+.muted{color:var(--hint)}
+.bar{height:6px;border-radius:3px;background:var(--sep);overflow:hidden;margin-top:5px}
+.bar>div{height:100%;border-radius:3px}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--sep);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:5}
+.tabs button{flex:1;background:none;border:0;color:var(--hint);font-size:11px;padding:4px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabs button svg{width:22px;height:22px}
+.tabs button.on{color:var(--accent)}
+.chart{position:relative;height:220px}
+.filters{display:flex;gap:8px;margin-bottom:10px}
+input,select{font:inherit;color:var(--text);background:var(--card);border:0;border-radius:10px;padding:9px 12px;min-width:0}
+.filters input{flex:1}.filters select{max-width:45%}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--card);border-radius:14px;padding:4px 10px;font-size:13px;margin:0 6px 10px 0;cursor:pointer}
+.day{font-size:12px;color:var(--hint);margin:12px 0 4px}
+.op{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;background:var(--card);border-radius:10px;margin-bottom:6px;cursor:pointer}
+.op .c{font-size:14px}.op .m{font-size:12px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60vw}
+.op .a{font-weight:600;white-space:nowrap}
+.tag{font-size:10px;color:var(--hint);border:1px solid var(--sep);border-radius:6px;padding:0 4px;margin-left:4px}
+.editor{background:var(--card);border-radius:10px;padding:10px 12px;margin:-4px 0 8px;display:grid;gap:8px}
+.editor .btns{display:flex;gap:8px}
+.btn{flex:1;border:0;border-radius:10px;padding:10px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-text)}
+.btn.sec2{background:transparent;color:var(--c-bad);border:1px solid var(--c-bad)}
+.note{font-size:12px;color:var(--hint);text-align:center;margin:10px 0}
+.banner{background:var(--c-warn);color:#3a2800;font-size:13px;border-radius:10px;padding:8px 12px;margin-bottom:12px}
+.empty{color:var(--hint);text-align:center;padding:40px 0}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--hint);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td{padding:6px 0;border-top:1px solid var(--sep)}td:not(:first-child){text-align:right}
+</style>
+</head>
+<body>
+<main id="app"><div class="empty">Загрузка…</div></main>
+<nav class="tabs" id="tabs">
+  <button data-tab="month" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Месяц</button>
+  <button data-tab="year"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Год</button>
+  <button data-tab="ops"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Операции</button>
+  <button data-tab="cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>Капитал</button>
+</nav>
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const API = new URLSearchParams(location.search).get('api');
+const DEMO = !API;
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MSHORT = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+const GCOL = {'Обязательные':'var(--c-must)','Образ жизни':'var(--c-life)','Разовые':'var(--c-once)'};
+const GHEX = {'Обязательные':'#378ADD','Образ жизни':'#1D9E75','Разовые':'#D85A30'};
+const EXP='Расход', INC='Доход', TRF='Перевод', ADJ='Корректировка';
+
+let D = null;               // данные с сервера
+const S = { tab:'month', y:0, m:0, year:0, q:'', cat:'', fm:null, open:null };
+let charts = [];
+
+const nf = new Intl.NumberFormat('ru-RU', {maximumFractionDigits:0});
+const money = n => nf.format(Math.round(n)) + ' ₽';
+const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '') + nf.format(Math.abs(Math.round(n))) + ' ₽';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sum = a => a.reduce((s, o) => s + o.a, 0);
+const $ = id => document.getElementById(id);
+
+async function api(params) {
+  const q = new URLSearchParams(Object.assign({initData: tg ? tg.initData : ''}, params));
+  const r = await fetch(API + '?' + q.toString());
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+
+async function load() {
+  try {
+    D = DEMO ? demoData() : await api({action:'dashboard'});
+  } catch (e) {
+    $('app').innerHTML = '<div class="empty">Не удалось загрузить данные.<br><small>' + esc(e.message) + '</small></div>';
+    return;
+  }
+  D.ops = D.ops.map(r => { const [y,m] = r[0].split('-').map(Number); return {d:r[0], y, m, t:r[1], a:+r[2], c:r[3], g:r[4], cm:r[5], id:r[6], s:r[7]}; });
+  D.cap = D.cap.map(r => ({d:r[0], t:+r[1], b:+r[2]})).sort((a,b) => a.d < b.d ? -1 : 1);
+  if (!S.y) { const [y,m] = D.now.split('-').map(Number); S.y = y; S.m = m; S.year = y; }
+  render();
+}
+
+function render() {
+  charts.forEach(c => c.destroy()); charts = [];
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
+  const html = ({month:renderMonth, year:renderYear, ops:renderOps, cap:renderCap})[S.tab]();
+  $('app').innerHTML = (DEMO ? '<div class="banner">Демо-режим: данные выдуманные. Откройте дашборд из бота, чтобы увидеть свои.</div>' : '') + html;
+  ({month:afterMonth, year:afterYear, ops:afterOps, cap:afterCap})[S.tab]();
+}
+
+/* ---------- Месяц ---------- */
+function renderMonth() {
+  const mo = D.ops.filter(o => o.y === S.y && o.m === S.m);
+  const inc = sum(mo.filter(o => o.t === INC)), exp = sum(mo.filter(o => o.t === EXP));
+  const isNow = D.now.startsWith(S.y + '-' + String(S.m).padStart(2,'0'));
+  let h = nav(MONTHS[S.m-1] + ' ' + S.y, 'pm', 'nm', isNow);
+  h += '<div class="cards">' +
+    card('Доходы', money(inc), 'pos') + card('Расходы', money(exp)) +
+    card('Отложено', signed(inc - exp), inc - exp >= 0 ? 'pos' : 'neg') + '</div>';
+  const expCats = D.cats.filter(c => c.t === EXP);
+  const groups = [...new Set(expCats.map(c => c.g))];
+  const maxCat = Math.max(1, ...expCats.map(c => sum(mo.filter(o => o.t === EXP && o.c === c.n))));
+  groups.forEach(g => {
+    const rows = expCats.filter(c => c.g === g).map(c => ({c, s: sum(mo.filter(o => o.t === EXP && o.c === c.n))}))
+      .filter(x => x.s || x.c.l);
+    if (!rows.length) return;
+    rows.sort((a,b) => b.s - a.s);
+    const gs = rows.reduce((s,x) => s + x.s, 0);
+    h += '<div class="sec"><h3><span><span class="dot" style="background:' + (GCOL[g]||'var(--hint)') + '"></span>' + esc(g) + '</span><span>' + money(gs) + '</span></h3>';
+    rows.forEach(({c, s}) => {
+      let w, col, right = money(s);
+      if (c.l) {
+        const p = s / c.l; w = Math.min(100, p * 100);
+        col = p >= 1 ? 'var(--c-bad)' : p >= .8 ? 'var(--c-warn)' : 'var(--c-life)';
+        right = nf.format(Math.round(s)) + ' <span class="muted">/ ' + nf.format(c.l) + '</span>';
+      } else { w = s / maxCat * 100; col = GCOL[g] || 'var(--hint)'; }
+      h += '<div class="row" data-cat="' + esc(c.n) + '"><div class="t"><span>' + esc(c.n) + '</span><span>' + right + '</span></div>' +
+           '<div class="bar"><div style="width:' + w.toFixed(1) + '%;background:' + col + '"></div></div></div>';
+    });
+    h += '</div>';
+  });
+  const incRows = D.cats.filter(c => c.t === INC).map(c => ({c, s: sum(mo.filter(o => o.t === INC && o.c === c.n))})).filter(x => x.s);
+  if (incRows.length) {
+    h += '<div class="sec"><h3><span><span class="dot" style="background:var(--c-inc)"></span>Доходы</span><span>' + money(inc) + '</span></h3>';
+    incRows.forEach(({c, s}) => h += '<div class="row" data-cat="' + esc(c.n) + '"><div class="t"><span>' + esc(c.n) + '</span><span>' + money(s) + '</span></div></div>');
+    h += '</div>';
+  }
+  const trf = sum(mo.filter(o => o.t === TRF));
+  if (trf) h += '<div class="note">Переведено в инвестиции: ' + money(trf) + '</div>';
+  if (!mo.length) h += '<div class="empty">В этом месяце операций нет</div>';
+  h += '<div class="sec"><h3><span>💳 Карта Т-Банка</span><span>' + money(D.bal) + '</span></h3><div class="muted" style="font-size:12px">Остаток по операциям из бота. Исправить: /balance 12340</div></div>';
+  return h;
+}
+function afterMonth() {
+  bindNav(() => shiftMonth(-1), () => shiftMonth(1));
+  document.querySelectorAll('.row[data-cat]').forEach(el => el.onclick = () => {
+    S.cat = el.dataset.cat; S.fm = {y:S.y, m:S.m}; S.q = ''; S.tab = 'ops'; render();
+  });
+}
+function shiftMonth(k) { let m = S.m + k, y = S.y; if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; } S.y = y; S.m = m; render(); }
+
+/* ---------- Год ---------- */
+function renderYear() {
+  const yo = D.ops.filter(o => o.y === S.year);
+  const inc = sum(yo.filter(o => o.t === INC)), exp = sum(yo.filter(o => o.t === EXP));
+  const months = new Set(yo.filter(o => o.t === EXP).map(o => o.m)).size || 1;
+  const maxY = Number(D.now.slice(0,4));
+  let h = nav(String(S.year), 'pm', 'nm', S.year >= maxY);
+  h += '<div class="cards">' + card('Доходы', money(inc), 'pos') + card('Расходы', money(exp)) +
+       card('Отложено', signed(inc - exp), inc - exp >= 0 ? 'pos' : 'neg') + '</div>';
+  h += '<div class="sec"><h3><span>По месяцам</span><span class="muted" style="font-weight:400;font-size:12px">в среднем ' + money(exp / months) + ' / мес</span></h3>' +
+       '<div class="chart"><canvas id="ych"></canvas></div><div class="legend">' +
+       Object.keys(GHEX).map(g => '<span><i style="background:' + GHEX[g] + '"></i>' + g + '</span>').join('') +
+       '<span><i style="background:#4f9a1c;height:3px;vertical-align:3px"></i>Доходы</span></div></div>';
+  const byCat = D.cats.filter(c => c.t === EXP).map(c => ({c, s: sum(yo.filter(o => o.t === EXP && o.c === c.n))})).filter(x => x.s).sort((a,b) => b.s - a.s);
+  if (byCat.length) {
+    h += '<div class="sec"><h3><span>Куда ушли деньги</span></h3>';
+    byCat.forEach(({c, s}) => h += '<div class="row"><div class="t"><span>' + esc(c.n) + '</span><span>' + money(s) + ' <span class="muted">' + Math.round(s / exp * 100) + '%</span></span></div>' +
+      '<div class="bar"><div style="width:' + (s / byCat[0].s * 100).toFixed(1) + '%;background:' + (GCOL[c.g] || 'var(--hint)') + '"></div></div></div>');
+    h += '</div>';
+  }
+  if (!yo.length) h += '<div class="empty">За этот год данных нет</div>';
+  return h;
+}
+function afterYear() {
+  bindNav(() => { S.year--; render(); }, () => { S.year++; render(); });
+  const el = $('ych'); if (!el) return;
+  const yo = D.ops.filter(o => o.y === S.year);
+  const ds = Object.keys(GHEX).map(g => ({type:'bar', label:g, backgroundColor:GHEX[g], stack:'e', borderRadius:3,
+    data: MSHORT.map((_, i) => sum(yo.filter(o => o.t === EXP && o.g === g && o.m === i+1)))}));
+  ds.push({type:'line', label:'Доходы', borderColor:'#4f9a1c', backgroundColor:'#4f9a1c', pointRadius:2, tension:.3,
+    data: MSHORT.map((_, i) => futureMonth(S.year, i+1) ? null : sum(yo.filter(o => o.t === INC && o.m === i+1)))});
+  charts.push(new Chart(el, {data:{labels:MSHORT, datasets:ds}, options:chartOpts(true)}));
+}
+
+/* ---------- Операции ---------- */
+function renderOps() {
+  let list = D.ops.slice();
+  if (S.fm) list = list.filter(o => o.y === S.fm.y && o.m === S.fm.m);
+  if (S.cat) list = list.filter(o => o.c === S.cat);
+  if (S.q) { const q = S.q.toLowerCase(); list = list.filter(o => (o.c + ' ' + o.cm).toLowerCase().includes(q) || String(o.a).includes(q)); }
+  list.sort((a, b) => a.d < b.d ? 1 : a.d > b.d ? -1 : 0);
+  let h = '<div class="filters"><input id="q" type="search" placeholder="Поиск" value="' + esc(S.q) + '">' +
+    '<select id="fc"><option value="">Все категории</option>' +
+    D.cats.map(c => '<option' + (c.n === S.cat ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</select></div>';
+  if (S.fm) h += '<span class="chip" id="clrm">' + MONTHS[S.fm.m-1] + ' ' + S.fm.y + ' ✕</span>';
+  if (!list.length) return h + '<div class="empty">Ничего не найдено</div>';
+  const total = list.reduce((s, o) => s + (o.t === INC ? o.a : o.t === EXP ? -o.a : 0), 0);
+  h += '<div class="note" style="text-align:left;margin-top:0">' + list.length + ' операций · итог ' + signed(total) + '</div>';
+  let last = '';
+  list.slice(0, 300).forEach(o => {
+    if (o.d !== last) { last = o.d; h += '<div class="day">' + dayLabel(o.d) + '</div>'; }
+    const sign = o.t === INC ? '+' : o.t === EXP ? '−' : o.t === TRF ? '↗ ' : '± ';
+    const cls = o.t === INC ? 'pos' : '';
+    h += '<div class="op" data-id="' + esc(o.id) + '"><div style="min-width:0"><div class="c">' + esc(o.c) +
+      (o.s === 'перенос' ? '<span class="tag">итог мес.</span>' : '') + '</div>' + (o.cm ? '<div class="m">' + esc(o.cm) + '</div>' : '') +
+      '</div><div class="a ' + cls + '">' + sign + nf.format(Math.abs(o.a)) + '</div></div>';
+    if (S.open === o.id && (o.t === EXP || o.t === INC)) {
+      h += '<div class="editor"><select id="ec">' + D.cats.map(c => '<option' + (c.n === o.c ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</select>' +
+        '<input id="ea" inputmode="decimal" value="' + o.a + '">' +
+        '<div class="btns"><button class="btn" id="esave">Сохранить</button><button class="btn sec2" id="edel">Удалить</button></div></div>';
+    }
+  });
+  if (list.length > 300) h += '<div class="note">Показаны последние 300. Уточните поиск.</div>';
+  return h;
+}
+function afterOps() {
+  const q = $('q');
+  q.oninput = () => { S.q = q.value; const pos = q.selectionStart; render(); const n = $('q'); n.focus(); n.setSelectionRange(pos, pos); };
+  $('fc').onchange = e => { S.cat = e.target.value; render(); };
+  if ($('clrm')) $('clrm').onclick = () => { S.fm = null; render(); };
+  document.querySelectorAll('.op').forEach(el => el.onclick = () => { S.open = S.open === el.dataset.id ? null : el.dataset.id; render(); });
+  if ($('esave')) $('esave').onclick = () => saveOp(S.open, $('ec').value, $('ea').value);
+  if ($('edel')) $('edel').onclick = () => confirmBox('Удалить операцию?', ok => ok && delOp(S.open));
+}
+async function saveOp(id, cat, amount) {
+  const a = Number(String(amount).replace(/\s/g,'').replace(',', '.'));
+  if (!(a > 0)) return alertBox('Введите сумму больше нуля');
+  try {
+    if (DEMO) { const o = D.ops.find(x => x.id === id); const c = D.cats.find(x => x.n === cat); Object.assign(o, {c:cat, g:c.g, t:c.t, a}); }
+    else await api({action:'update', id, cat, amount:String(a)});
+    S.open = null;
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    DEMO ? render() : reload();
+  } catch (e) { alertBox('Не сохранилось: ' + e.message); }
+}
+async function delOp(id) {
+  try {
+    if (DEMO) D.ops = D.ops.filter(x => x.id !== id); else await api({action:'delete', id});
+    S.open = null; DEMO ? render() : reload();
+  } catch (e) { alertBox('Не удалилось: ' + e.message); }
+}
+async function reload() { const keep = Object.assign({}, S); await load(); Object.assign(S, keep); render(); }
+
+/* ---------- Капитал ---------- */
+function renderCap() {
+  const c = D.cap;
+  if (!c.length) return '<div class="empty">Записей о капитале пока нет.<br>Команда в боте: /capital 88049 83517</div>';
+  const tot = x => x.t + x.b;
+  const last = c[c.length-1], prev = c[c.length-2];
+  const yStart = c.filter(x => x.d.slice(0,4) < last.d.slice(0,4)).pop();
+  let h = '<div class="nav"><b>Капитал</b><span class="muted" style="font-size:13px">на ' + dayLabel(last.d, true) + '</span></div>';
+  h += '<div class="cards">' + card('Всего', money(tot(last))) +
+    card('За месяц', prev ? pctStr(tot(last), tot(prev)) : '—', prev && tot(last) < tot(prev) ? 'neg' : 'pos') +
+    card('С начала года', yStart ? pctStr(tot(last), tot(yStart)) : '—', yStart && tot(last) < tot(yStart) ? 'neg' : 'pos') + '</div>';
+  h += '<div class="sec"><div class="chart"><canvas id="cch"></canvas></div><div class="legend">' +
+    '<span><i style="background:#7F77DD"></i>Всего</span><span><i style="background:#378ADD"></i>Т-Инвестиции</span><span><i style="background:#D85A30"></i>БКС</span></div></div>';
+  h += '<div class="sec"><table><tr><td class="muted">Дата</td><td class="muted">Т-Инв.</td><td class="muted">БКС</td><td class="muted">Всего</td></tr>' +
+    c.slice(-12).reverse().map(x => '<tr><td>' + dayLabel(x.d, true) + '</td><td>' + nf.format(x.t) + '</td><td>' + nf.format(x.b) + '</td><td><b>' + nf.format(tot(x)) + '</b></td></tr>').join('') +
+    '</table></div>';
+  return h;
+}
+function afterCap() {
+  const el = $('cch'); if (!el) return;
+  const c = D.cap, labels = c.map(x => { const [y,m] = x.d.split('-'); return MSHORT[+m-1] + ' ' + y.slice(2); });
+  const line = (label, col, data, w) => ({label, data, borderColor:col, backgroundColor:col, borderWidth:w, pointRadius:0, tension:.3});
+  charts.push(new Chart(el, {type:'line', data:{labels, datasets:[
+    line('Всего', '#7F77DD', c.map(x => x.t + x.b), 3), line('Т-Инвестиции', '#378ADD', c.map(x => x.t), 1.5), line('БКС', '#D85A30', c.map(x => x.b), 1.5)]},
+    options:chartOpts(false)}));
+}
+
+/* ---------- Общее ---------- */
+function nav(title, prevId, nextId, nextDisabled) {
+  return '<div class="nav"><button id="' + prevId + '" aria-label="Назад">‹</button><b>' + title + '</b><button id="' + nextId + '" aria-label="Вперёд"' + (nextDisabled ? ' disabled' : '') + '>›</button></div>';
+}
+function futureMonth(y, m) { const [ny, nm] = D.now.split('-').map(Number); return y > ny || (y === ny && m > nm); }
+function bindNav(prev, next) { $('pm').onclick = prev; $('nm').onclick = next; }
+function card(l, v, cls) { return '<div class="card"><div class="l">' + l + '</div><div class="v ' + (cls||'') + '">' + v + '</div></div>'; }
+function pctStr(a, b) { const p = (a - b) / b * 100; return (p > 0 ? '+' : '') + p.toFixed(1).replace('.', ',') + '%'; }
+function dayLabel(d, short) {
+  const [y, m, dd] = d.split('-').map(Number);
+  if (short) return String(dd).padStart(2,'0') + '.' + String(m).padStart(2,'0') + '.' + y;
+  const dt = new Date(y, m-1, dd);
+  const s = dt.toLocaleDateString('ru-RU', {weekday:'short', day:'numeric', month:'long', year: y === Number(D.now.slice(0,4)) ? undefined : 'numeric'});
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function chartOpts(stacked) {
+  const cs = getComputedStyle(document.body);
+  const hint = cs.getPropertyValue('--tg-theme-hint-color').trim() || (matchMedia('(prefers-color-scheme:dark)').matches ? '#7d8b99' : '#8a8f99');
+  const grid = 'rgba(128,128,128,.15)';
+  return {responsive:true, maintainAspectRatio:false, animation:{duration:300}, interaction:{mode:'index', intersect:false},
+    plugins:{legend:{display:false}, tooltip:{callbacks:{label:c => c.dataset.label + ': ' + money(c.parsed.y)}}},
+    scales:{x:{stacked, grid:{display:false}, ticks:{color:hint, font:{size:11}}},
+            y:{stacked, grid:{color:grid}, border:{display:false}, ticks:{color:hint, font:{size:11}, callback:v => v >= 1000 ? (v/1000) + 'к' : v}}}};
+}
+function alertBox(t) { tg && tg.showAlert ? tg.showAlert(t) : alert(t); }
+function confirmBox(t, cb) { tg && tg.showConfirm && tg.initData ? tg.showConfirm(t, cb) : cb(confirm(t)); }
+
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+  S.tab = b.dataset.tab; S.open = null;
+  if (S.tab === 'ops' && !S.cat && !S.q) S.fm = null;
+  if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+  render(); scrollTo(0, 0);
+});
+
+/* ---------- Демо-данные (только для просмотра без бота) ---------- */
+function demoData() {
+  const cats = [
+    ['Расход','Жильё','Обязательные',23500],['Расход','Продукты','Обязательные',7000],['Расход','Транспорт','Обязательные',1000],
+    ['Расход','Машина','Обязательные',16000],['Расход','Связь и подписки','Обязательные',500],['Расход','Кафе и рестораны','Образ жизни',5000],
+    ['Расход','Дом и быт','Образ жизни',500],['Расход','Одежда и техника','Образ жизни',500],['Расход','Здоровье и уход','Образ жизни',500],
+    ['Расход','Развлечения и хобби','Образ жизни',1000],['Расход','Путешествия','Разовые',0],['Расход','Подарки','Разовые',0],
+    ['Расход','Прочее и переводы','Разовые',0],['Доход','Зарплата','Доход',0],['Доход','Инвестиции','Доход',0],
+    ['Доход','Проценты по вкладам','Доход',0],['Доход','Кэшбэк','Доход',0],['Доход','Другое','Доход',0]].map(([t,n,g,l]) => ({t,n,g,l}));
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const ops = [], cap = []; let id = 0, t = 60000, b = 60000;
+  const now = new Date(); const ny = now.getFullYear(), nm = now.getMonth() + 1;
+  const pad = n => String(n).padStart(2, '0');
+  const base = {'Жильё':[23500,1],'Продукты':[600,12],'Транспорт':[250,4],'Машина':[2500,3],'Связь и подписки':[300,2],'Кафе и рестораны':[450,8],
+    'Дом и быт':[500,1],'Одежда и техника':[3000,.4],'Здоровье и уход':[1200,.6],'Развлечения и хобби':[700,1],'Путешествия':[15000,.15],'Подарки':[2500,.3],'Прочее и переводы':[1500,.8]};
+  for (let y = ny - 1; y <= ny; y++) for (let m = 1; m <= 12; m++) {
+    if (y === ny && m > nm) break;
+    const days = y === ny && m === nm ? now.getDate() : new Date(y, m, 0).getDate();
+    Object.entries(base).forEach(([c, [avg, freq]]) => {
+      let n = Math.floor(freq * days / 30 + rnd());
+      while (n-- > 0) { const cat = cats.find(x => x.n === c);
+        ops.push([y + '-' + pad(m) + '-' + pad(1 + Math.floor(rnd() * days)), 'Расход', Math.round(avg * (.5 + rnd())), c, cat.g, '', 'd' + id++, 'бот']); }
+    });
+    if (days >= 10) ops.push([y + '-' + pad(m) + '-10', 'Доход', 30000, 'Зарплата', 'Доход', 'аванс', 'd' + id++, 'бот']);
+    if (days >= 25) ops.push([y + '-' + pad(m) + '-25', 'Доход', 31000, 'Зарплата', 'Доход', '', 'd' + id++, 'бот']);
+    ops.push([y + '-' + pad(m) + '-' + pad(Math.min(days, 28)), 'Доход', Math.round(300 + rnd() * 700), 'Кэшбэк', 'Доход', '', 'd' + id++, 'бот']);
+    if (!(y === ny && m === nm)) { t *= 1 + (rnd() - .4) * .06; b *= 1 + (rnd() - .4) * .05; cap.push([y + '-' + pad(m) + '-' + pad(new Date(y, m, 0).getDate()), Math.round(t), Math.round(b)]); }
+  }
+  return {cats, ops, cap, bal: 18450, now: ny + '-' + pad(nm) + '-' + pad(now.getDate())};
+}
+
+load();
+</script>
+</body>
+</html>
